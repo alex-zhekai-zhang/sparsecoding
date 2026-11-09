@@ -72,8 +72,9 @@ Wall-clock was measured with 6 jobs running at once, 3 threads each. Earlier res
 To regenerate a single result:
 
 ```
+mkdir -p output/kodak/kodimXX/<method>
 python sparse_code_image.py --method <mean|spiking_lca|latency_slca|temporal_pattern_slca> --preprocess whiten \
-    --image images/kodak/kodimXX.png --out-dir output/kodak > output/kodak/kodimXX/<method>.log
+    --image images/kodak/kodimXX.png --out-dir output/kodak > output/kodak/kodimXX/<method>/<method>.log
 ```
 
 ## Rounding error

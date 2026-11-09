@@ -120,13 +120,14 @@ if __name__ == "__main__":
     print(f"active coefficients per patch: {np.count_nonzero(A, axis=0).mean():.1f} / {Phi.shape[1]}")
 
     name = os.path.splitext(os.path.basename(args.image))[0]
-    out = os.path.join(args.out_dir, name)   # one folder per image, holding the original and every method's reconstruction
-    os.makedirs(out, exist_ok=True)
+    out = os.path.join(args.out_dir, name)   # one folder per image, holding the original (and whitened) image
+    method_out = os.path.join(out, args.method)   # one subfolder per method, holding that method's reconstructions
+    os.makedirs(method_out, exist_ok=True)
     save(img, os.path.join(out, "gray.png"))
     if args.preprocess == 'whiten':
         save((original / np.max(abs(original))) / 2 + 0.5, os.path.join(out, "whitened.png"))
-        save((recon / np.max(abs(original))) / 2 + 0.5, os.path.join(out, f"{args.method}_recon.png"))
-        save(unwhitened_recon, os.path.join(out, f"{args.method}_recon_unwhitened.png"))
+        save((recon / np.max(abs(original))) / 2 + 0.5, os.path.join(method_out, f"{args.method}_recon.png"))
+        save(unwhitened_recon, os.path.join(method_out, f"{args.method}_recon_unwhitened.png"))
     else:
-        save(recon, os.path.join(out, f"{args.method}_recon.png"))
-    print(f"saved {out}/gray.png and {out}/{args.method}_recon.png")
+        save(recon, os.path.join(method_out, f"{args.method}_recon.png"))
+    print(f"saved {out}/gray.png and {method_out}/{args.method}_recon.png")
