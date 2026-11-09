@@ -8,6 +8,7 @@ Usage:
     python sparse_code_image.py --method latency_slca --image images/image.JPEG
     python sparse_code_image.py --method temporal_pattern_slca --image images/image.JPEG
     python sparse_code_image.py --method spiking_lca --image images/image.JPEG --preprocess whiten   
+    TODO: compare whitened ones only
 """
 import argparse
 import os
@@ -87,18 +88,18 @@ if __name__ == "__main__":
         X_hat = Phi @ A
     elif args.method == "spiking_lca":
         Phi, lr = config.load_phi(args.preprocess)
-        A = SLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, SLCA.T, 2 * Phi.shape[1], record=False).numpy()
-        X_hat = np.concatenate([Phi, -Phi], axis=1) @ A
+        A = SLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, SLCA.T, Phi.shape[1], record=False).numpy()
+        X_hat = Phi @ A
     elif args.method == "latency_slca":
         Phi, lr = config.load_phi(args.preprocess)
         T = np.abs(X).max()   # cycle length: covers the largest ON/OFF input
-        A = LSLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, LSLCA.S, T, 2 * Phi.shape[1], record=False).numpy()
-        X_hat = np.concatenate([Phi, -Phi], axis=1) @ A
+        A = LSLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, LSLCA.S, T, Phi.shape[1], record=False).numpy()
+        X_hat = Phi @ A
     elif args.method == 'temporal_pattern_slca':
         Phi, lr = config.load_phi(args.preprocess)
         T = np.abs(X).max()   # representable range: covers the largest ON/OFF input
-        A = TPSLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, TPSLCA.S, T, 2 * Phi.shape[1], record=False).numpy()
-        X_hat = np.concatenate([Phi, -Phi], axis=1) @ A
+        A = TPSLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, TPSLCA.S, T, Phi.shape[1], record=False).numpy()
+        X_hat = Phi @ A
     elif args.method == "mean":   # control: all-zero code, so only what preprocessing removed comes back (each patch's mean for sub-mean, the image's mean for whiten)
         Phi, lr = config.load_phi(args.preprocess)
         A = np.zeros((Phi.shape[1], X.shape[1]))
@@ -110,16 +111,22 @@ if __name__ == "__main__":
     if args.preprocess == 'sub-mean':
         recon = from_patches(X_hat * scale + means, shape)
     elif args.preprocess == 'whiten':
-        recon = unwhiten(from_patches(X_hat * scale, shape), mean)
-
-
+        
+        recon = from_patches(X_hat * scale, shape)#unwhiten(from_patches(X_hat * scale, shape), mean)
+        unwhitened_recon = unwhiten(recon, mean)
+        original = whiten(original)
     mse = np.mean((recon - original) ** 2)
-    print(f"MSE: {mse:.6f}   PSNR: {10 * np.log10(1 / mse):.2f} dB")
+    print(f"MSE: {mse:.6f}   SNR: {10 * np.log10(np.mean(original ** 2) / mse):.2f} dB")
     print(f"active coefficients per patch: {np.count_nonzero(A, axis=0).mean():.1f} / {Phi.shape[1]}")
 
     name = os.path.splitext(os.path.basename(args.image))[0]
     out = os.path.join(args.out_dir, name)   # one folder per image, holding the original and every method's reconstruction
     os.makedirs(out, exist_ok=True)
-    save(original, os.path.join(out, "gray.png"))
-    save(recon, os.path.join(out, f"{args.method}_recon.png"))
+    save(img, os.path.join(out, "gray.png"))
+    if args.preprocess == 'whiten':
+        save((original / np.max(abs(original))) / 2 + 0.5, os.path.join(out, "whitened.png"))
+        save((recon / np.max(abs(original))) / 2 + 0.5, os.path.join(out, f"{args.method}_recon.png"))
+        save(unwhitened_recon, os.path.join(out, f"{args.method}_recon_unwhitened.png"))
+    else:
+        save(recon, os.path.join(out, f"{args.method}_recon.png"))
     print(f"saved {out}/gray.png and {out}/{args.method}_recon.png")

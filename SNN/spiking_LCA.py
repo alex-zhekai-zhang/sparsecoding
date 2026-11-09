@@ -10,7 +10,7 @@ import SNN.config as config
 
 T = 204800
 def spiking_LCA(input, lamby, Phi, lr, epsilon, T, num_bases, record=True, dt=None):   # T = number of steps, dt = simulated time per step
-    Phi = torch.tensor(np.concatenate([Phi, -Phi], axis=1), dtype=torch.float32) #Doubled Dictionary
+    Phi = torch.tensor(Phi, dtype=torch.float32)
     x = torch.tensor(input, dtype=torch.float32)   
     x = torch.cat([torch.clamp(x, min=0), torch.clamp(-x, min=0)])   #On Off Split
     I = torch.eye(num_bases)
@@ -49,7 +49,7 @@ def spiking_LCA(input, lamby, Phi, lr, epsilon, T, num_bases, record=True, dt=No
 if __name__ == "__main__":
     Phi = config.Phi
     image = config.image - config.image.mean()
-    a, vs, spikes = spiking_LCA(image, config.lamby, Phi, config.lr, config.epsilon, T, 2 * Phi.shape[1])
+    a, vs, spikes = spiking_LCA(image, config.lamby, Phi, config.lr, config.epsilon, T, Phi.shape[1])
     print(a)
     plt.imshow(spikes.T, aspect='auto', interpolation='nearest')
     plt.show()

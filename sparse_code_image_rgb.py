@@ -41,8 +41,8 @@ def code_channel(channel, method):
         A = LCA.LCA(X, LCA.lamby, Phi, LCA.lr, LCA.epsilon, Phi.shape[1])
     else:
         T = np.abs(X).max()   # cycle length: covers the largest ON/OFF input
-        A = LSLCA.spiking_LCA(X, config.lamby, config.Phi, config.lr, config.epsilon, LSLCA.S, T, 2 * config.Phi.shape[1], record=False).numpy()
-        Phi = np.concatenate([config.Phi, -config.Phi], axis=1)   # A has one coefficient per doubled-dictionary atom
+        A = LSLCA.spiking_LCA(X, config.lamby, config.Phi, config.lr, config.epsilon, LSLCA.S, T, config.Phi.shape[1], record=False).numpy()
+        Phi = config.Phi
 
     #undo the preprocessing and put the patches back together
     recon = from_patches((Phi @ A) * scale + means, shape)

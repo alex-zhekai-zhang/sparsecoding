@@ -47,7 +47,7 @@ def sample_patches(paths, n, rng, patch=8, max_side=512, preprocess="sub-mean"):
         X = X - X.mean(axis=0)   # remove each patch's mean brightness
     return X / (X.std() or 1.0)   # ~unit variance
 
-def learn_phi(X, num_bases, lamby, rng, iters=20000, batch=256, eta=1.0, steps=200):
+def learn_phi(X, num_bases, lamby, rng, iters=10000, batch=256, eta=1.0, steps=200):
     Phi = rng.standard_normal((X.shape[0], num_bases))
     Phi *= 1 / np.linalg.norm(Phi, axis=0) #initialize norm
     for it in range(iters):

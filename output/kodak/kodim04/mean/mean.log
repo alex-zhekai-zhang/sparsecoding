@@ -1,0 +1,6 @@
+image 336x512 -> 2688 patches
+0.09159836449872943 -0.09385954981813334
+MSE: 0.000054   SNR: 0.00 dB
+active coefficients per patch: 0.0 / 128
+saved output/kodak/kodim04/gray.png and output/kodak/kodim04/mean_recon.png
+exit 0 wall 2s

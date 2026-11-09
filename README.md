@@ -7,67 +7,67 @@ To visualize Phi, run ```python SNN/config.py n``` for an index n in Phi, or jus
 
 # Spiking LCA comparison on Kodak
 
-Rate-coded (`spiking_lca`), latency-coded (`latency_slca`) and temporal-pattern-coded (`temporal_pattern_slca`) spiking LCA, run on all 24 Kodak images with whitening preprocessing (`--preprocess whiten`). The control (`mean`) is an all-zero code, so it reconstructs every pixel as the image's mean brightness.
+Rate-coded (`spiking_lca`), latency-coded (`latency_slca`) and temporal-pattern-coded (`temporal_pattern_slca`) spiking LCA, run on all 24 Kodak images with whitening preprocessing (`--preprocess whiten`). The control (`mean`) is an all-zero code.
 
 ## Setup
 
 | | |
 |---|---|
 | Images | Kodak `kodim01`–`kodim24`, grayscale, downscaled to 512 px on the long side (512×336 or 336×512, 2688 patches each) |
-| Whitening | Whole image filtered in Fourier space by R(f) = f·exp(−(f/0.4)⁴), f = √(fx² + fy²), then cut into 8×8 patches and scaled to unit variance per image |
-| Unwhitening | Multiply by 1/R at every f > 0 (f = 0 set to 0), undo the scale, add the image mean back |
-| Dictionary | `SNN/phi_learned_whiten.npz`: 64×128, learned on 100k random patches of whitened Kodak images, columns at norm 1 |
+| Whitening | Whole image filtered in Fourier space by R(f) = f·exp(−(f/f₀)⁴), f₀ = 0.4 cycles/pixel, f = √(fx² + fy²) (`np.fft.fftfreq` units), then cut into 8×8 patches and scaled to unit variance per image |
+| Dictionary | `SNN/phi_learned_whiten.npz`: 64×128 (single, not doubled), learned with signed ISTA (λ = 0.1, 10,000 iterations, batch 256) on 100k random patches of whitened Kodak images (f₀ = 0.4), columns at norm 1 |
 | Parameters | λ = 0.1, ε = 0.1, lr = 1/‖Φ‖₂² = 0.160 (`SNN/config.py`) |
 | Rate | 204,800 steps, dt = 1 / max\|x\| per image |
 | Latency | 400 cycles × 512 steps = 204,800 steps, T = max\|x\| per image, leftover v carried across cycles (see Rounding error) |
 | Temporal pattern | 400 cycles × 9 bits = 3,600 steps, same T, so q = T/512, the same grid as latency, leftover v carried across cycles |
 
-PSNR = 10·log10(1/MSE) on pixels in [0, 1]. "Active" is the number of nonzero coefficients per patch in the doubled (±Φ) dictionary.
+Metric: SNR = 10·log10(mean(W²) / MSE), where W is the whitened image and MSE = mean((Ŵ − W)²), with Ŵ the reconstruction Φa put back together and the scale undone, before unwhitening. "Active" is the number of nonzero coefficients per patch, out of 128.
 
 ## Summary (mean ± std over 24 images)
 
-| Method | PSNR (dB) | Difference from control (dB) | Active / patch | Recurrent spikes / patch | Input spikes / patch | Steps | Wall-clock / image |
-|---|---:|---:|---:|---:|---:|---:|---:|
-| Control (mean only) | 15.12 ± 2.47 | — | 0 | — | — | — | — |
-| Rate | 13.59 ± 2.84 | −1.53 ± 3.02 | 60.1 ± 8.0 | 372,690 | 860,211 | 204,800 | 783 s |
-| Latency | 14.38 ± 2.87 | −0.74 ± 3.12 | 48.8 ± 7.9 | 23,799 | 25,011 | 204,800 | 862 s |
-| Temporal pattern | 14.38 ± 2.88 | −0.73 ± 3.12 | 48.7 ± 7.8 | 52,277 | 65,999 | 3,600 | 13.1 s |
-
-Wall-clock was measured with 6 jobs running at once, 3 threads each. Earlier results are in `legacy_tests/`. 
-
-## Per-image PSNR (dB) and active coefficients per patch
-
-| Image | Control | Rate | Latency | TP | Active (rate) | Active (lat / TP) |
+| Method | SNR (dB) | Active / patch | Recurrent spikes / patch | Input spikes / patch | Steps | Wall-clock / image |
 |---|---:|---:|---:|---:|---:|---:|
-| kodim01 | 16.52 | 10.50 | 11.48 | 11.48 | 66.4 | 58.5 / 58.5 |
-| kodim02 | 22.24 | 16.72 | 17.28 | 17.27 | 67.4 | 51.3 / 51.2 |
-| kodim03 | 16.31 | 17.54 | 18.31 | 18.34 | 54.1 | 42.2 / 42.1 |
-| kodim04 | 16.67 | 16.88 | 17.52 | 17.57 | 65.3 | 51.3 / 51.1 |
-| kodim05 | 14.67 | 8.99 | 9.85 | 9.83 | 68.1 | 57.4 / 57.3 |
-| kodim06 | 12.70 | 12.51 | 13.09 | 13.10 | 63.4 | 52.2 / 52.2 |
-| kodim07 | 16.89 | 14.32 | 15.64 | 15.63 | 52.1 | 41.5 / 41.5 |
-| kodim08 | 12.44 | 8.04 | 9.00 | 8.98 | 59.4 | 52.4 / 52.4 |
-| kodim09 | 16.68 | 16.22 | 16.53 | 16.58 | 47.8 | 37.4 / 37.5 |
-| kodim10 | 16.43 | 15.99 | 16.82 | 16.86 | 56.5 | 42.8 / 42.8 |
-| kodim11 | 15.92 | 13.03 | 13.72 | 13.69 | 61.8 | 50.0 / 50.0 |
-| kodim12 | 15.04 | 16.47 | 17.84 | 17.78 | 56.0 | 44.4 / 44.4 |
-| kodim13 | 14.09 | 8.75 | 8.93 | 8.92 | 73.8 | 65.1 / 65.0 |
-| kodim14 | 14.72 | 11.92 | 12.87 | 12.87 | 71.2 | 59.5 / 59.4 |
-| kodim15 | 9.85 | 13.87 | 15.69 | 15.70 | 52.4 | 41.2 / 41.1 |
-| kodim16 | 15.63 | 16.50 | 17.09 | 17.11 | 64.6 | 53.3 / 53.2 |
-| kodim17 | 14.47 | 15.26 | 16.10 | 16.12 | 61.9 | 47.8 / 47.8 |
-| kodim18 | 16.70 | 11.39 | 12.25 | 12.29 | 68.7 | 56.3 / 56.2 |
-| kodim19 | 14.90 | 12.80 | 13.33 | 13.34 | 54.6 | 44.1 / 44.0 |
-| kodim20 | 9.38 | 13.48 | 14.15 | 14.10 | 42.4 | 33.4 / 33.4 |
-| kodim21 | 15.86 | 12.67 | 13.46 | 13.41 | 54.5 | 45.3 / 45.3 |
-| kodim22 | 16.09 | 14.15 | 15.01 | 15.03 | 69.0 | 55.3 / 55.2 |
-| kodim23 | 14.84 | 17.84 | 18.33 | 18.36 | 48.1 | 36.3 / 36.3 |
-| kodim24 | 13.74 | 10.34 | 10.80 | 10.79 | 62.0 | 51.9 / 51.8 |
+| Control (zero code) | 0.00 ± 0.00 | 0 | — | — | — | — |
+| Rate | 15.05 ± 0.71 | 41.7 ± 4.9 | 528,804 | 860,211 | 204,800 | 506 s |
+| Latency | 13.04 ± 0.61 | 35.8 ± 5.0 | 15,343 | 25,011 | 204,800 | 522 s |
+| Temporal pattern | 13.13 ± 0.63 | 35.7 ± 4.9 | 37,228 | 65,999 | 3,600 | 9.8 s |
+
+Wall-clock was measured with 6 jobs running at once, 3 threads each. Earlier results are in `legacy_tests/`.
+
+## Per-image SNR (dB) and active coefficients per patch
+
+| Image | Rate | Latency | TP | Active (rate) | Active (lat / TP) |
+|---|---:|---:|---:|---:|---:|
+| kodim01 | 14.48 | 12.61 | 12.98 | 46.2 | 41.8 / 41.8 |
+| kodim02 | 14.50 | 12.65 | 12.66 | 45.4 | 37.3 / 37.3 |
+| kodim03 | 15.40 | 13.27 | 13.31 | 37.9 | 31.6 / 31.5 |
+| kodim04 | 14.55 | 12.52 | 12.60 | 44.6 | 37.4 / 37.3 |
+| kodim05 | 13.94 | 12.08 | 12.11 | 48.0 | 42.3 / 42.3 |
+| kodim06 | 15.07 | 13.23 | 13.24 | 43.8 | 38.0 / 38.0 |
+| kodim07 | 16.16 | 14.09 | 14.12 | 37.6 | 32.1 / 32.0 |
+| kodim08 | 14.83 | 13.06 | 13.28 | 42.9 | 39.2 / 39.1 |
+| kodim09 | 16.11 | 13.79 | 14.00 | 33.5 | 27.8 / 27.8 |
+| kodim10 | 15.56 | 13.55 | 13.56 | 39.3 | 32.1 / 32.1 |
+| kodim11 | 15.07 | 13.06 | 13.06 | 42.7 | 36.5 / 36.5 |
+| kodim12 | 16.11 | 14.14 | 14.26 | 39.2 | 32.9 / 32.9 |
+| kodim13 | 13.64 | 11.90 | 11.91 | 49.8 | 45.1 / 45.0 |
+| kodim14 | 14.36 | 12.49 | 12.51 | 48.7 | 42.6 / 42.6 |
+| kodim15 | 15.39 | 13.18 | 13.33 | 37.6 | 31.6 / 31.6 |
+| kodim16 | 15.11 | 13.30 | 13.31 | 44.1 | 38.1 / 38.1 |
+| kodim17 | 15.14 | 13.03 | 13.03 | 43.1 | 35.9 / 35.9 |
+| kodim18 | 14.22 | 12.28 | 12.35 | 46.3 | 39.9 / 39.8 |
+| kodim19 | 15.64 | 13.65 | 13.70 | 38.4 | 32.7 / 32.7 |
+| kodim20 | 16.25 | 13.98 | 14.09 | 31.5 | 26.3 / 26.3 |
+| kodim21 | 15.39 | 13.24 | 13.32 | 36.8 | 31.8 / 31.8 |
+| kodim22 | 14.47 | 12.43 | 12.56 | 46.9 | 39.9 / 39.8 |
+| kodim23 | 15.41 | 12.93 | 13.30 | 34.2 | 27.8 / 27.8 |
+| kodim24 | 14.37 | 12.45 | 12.50 | 43.4 | 38.0 / 37.9 |
 
 ## Files and reproduction
 
-- `output/kodak/kodimXX/` contains `gray.png` (the original) and, for each method, `<method>_recon.png` and `<method>.log` (all printed output: spike counts, MSE, PSNR, active).
+- `output/kodak/kodimXX/` contains `gray.png` (the grayscale original), `whitened.png` (W, scaled by max\|W\| into [0, 1]) and one subfolder `<method>/` per method holding `<method>_recon.png` (Ŵ on the same scale as `whitened.png`), `<method>_recon_unwhitened.png` (Ŵ unwhitened, clipped to [0, 1]) and `<method>.log` (all printed output: spike counts, MSE, SNR, active).
 - `output/kodak/results.csv` has every number above, one row per image and method.
+- Earlier dictionaries: `SNN/phi_learned_whiten_doubleddict.npz` (doubled dictionary run), `SNN/phi_learned_whiten_f06.npz` (f₀ = 0.6).
 
 To regenerate a single result:
 
