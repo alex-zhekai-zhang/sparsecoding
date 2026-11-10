@@ -22,7 +22,7 @@ from SNN import spiking_LCA as SLCA
 from SNN import latency_SLCA as LSLCA
 from SNN import temporal_pattern_SLCA as TPSLCA
 from SNN.phi_learner import whiten, unwhiten
-
+import classical.nonnegative_LCA as NLCA
 
 PATCH = 8
 
@@ -51,7 +51,7 @@ def save(img, path):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--method", choices=["ista", "lca", "spiking_lca", "latency_slca", "temporal_pattern_slca", "mean"], required=True)
+    parser.add_argument("--method", choices=["ista", "lca", "spiking_lca", "latency_slca", "temporal_pattern_slca", "mean", "nonnegative_lca"], required=True)
     parser.add_argument("--image", required=True)
     parser.add_argument("--max-side", type=int, default=512, help="downscale so the longest side is at most this many pixels (0 = no downscaling)")
     parser.add_argument("--out-dir", default="output", help="results go in <out-dir>/<image name>/")
@@ -85,6 +85,10 @@ if __name__ == "__main__":
     elif args.method == "lca":
         Phi = LCA.Phi
         A = LCA.LCA(X, LCA.lamby, Phi, LCA.lr, LCA.epsilon, Phi.shape[1])
+        X_hat = Phi @ A
+    elif args.method == "nonnegative_lca":
+        Phi, lr = config.load_phi(args.preprocess)
+        A = NLCA.LCA(X, config.lamby, Phi, lr, config.epsilon, Phi.shape[1])
         X_hat = Phi @ A
     elif args.method == "spiking_lca":
         Phi, lr = config.load_phi(args.preprocess)

@@ -1,7 +1,5 @@
 image 512x336 -> 2688 patches
-rate: 204800 steps (dt=0.124, 25464 time units), 674346 recurrent spikes/patch, 1048859 input spikes/patch, 501.8s
-0.10580671936514545 -0.0867340633801757
-MSE: 0.000006   SNR: 14.37 dB
-active coefficients per patch: 43.4 / 128
-saved output/kodak/kodim24/gray.png and output/kodak/kodim24/spiking_lca_recon.png
-exit 0 wall 503s
+rate: 204800 steps (dt=0.124, 25464 time units), 563017 recurrent spikes/patch, 1048859 input spikes/patch, 462.0s
+MSE: 0.000001   SNR: 20.87 dB
+active coefficients per patch: 42.6 / 128
+saved output/kodak/kodim24/gray.png and output/kodak/kodim24/spiking_lca/spiking_lca_recon.png

@@ -1,0 +1,4 @@
+image 512x336 -> 2688 patches
+MSE: 0.000001   SNR: 22.34 dB
+active coefficients per patch: 32.4 / 128
+saved output/kodak/kodim07/gray.png and output/kodak/kodim07/nonnegative_lca/nonnegative_lca_recon.png

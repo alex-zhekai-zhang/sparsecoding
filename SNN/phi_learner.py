@@ -11,8 +11,17 @@ import numpy as np
 from PIL import Image, ImageOps
 
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # so classical.ISTA can be imported when running this file directly
-import classical.ISTA as ISTA
 
+def nonnegative_ISTA(input, lamby, Phi, lr, num_bases, steps=1000):
+    x = input
+    I = np.eye(num_bases)
+    recurrent = (I - lr * ((Phi.transpose() @ Phi)))
+    feedforward = lr * Phi.transpose() @ x
+    a = np.zeros_like(feedforward) #same shape as feedforward, so x can be one patch or a matrix of patches (one per column)
+    for i in range(steps):
+        z = recurrent @ a + feedforward
+        a = np.maximum(z - lr*lamby, 0)
+    return a
 def whitening_filter(shape, f_0=0.4):
     #see whitening_test.py
     fy = np.fft.fftfreq(shape[0])[:, None]
@@ -47,13 +56,13 @@ def sample_patches(paths, n, rng, patch=8, max_side=512, preprocess="sub-mean"):
         X = X - X.mean(axis=0)   # remove each patch's mean brightness
     return X / (X.std() or 1.0)   # ~unit variance
 
-def learn_phi(X, num_bases, lamby, rng, iters=10000, batch=256, eta=1.0, steps=200):
+def learn_phi(X, num_bases, lamby, rng, iters=10000, batch=256, eta=0.1, steps=200):
     Phi = rng.standard_normal((X.shape[0], num_bases))
     Phi *= 1 / np.linalg.norm(Phi, axis=0) #initialize norm
     for it in range(iters):
         x = X[:, rng.integers(X.shape[1], size=batch)]
         lr = 1 / np.linalg.norm(Phi, 2) ** 2   # largest stable step for ISTA
-        a = ISTA.ISTA(x, lamby, Phi, lr, num_bases, steps)
+        a = nonnegative_ISTA(x, lamby, Phi, lr, num_bases, steps)
         residual = x - Phi @ a
         Phi += eta * residual @ a.T / batch   # -dE/dPhi, averaged over the batch
         Phi *= 1 / np.maximum(np.linalg.norm(Phi, axis=0), 1e-12)   # otherwise Phi arbitrarily grows and a shrinks which is cheating
