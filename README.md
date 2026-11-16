@@ -13,16 +13,16 @@ Non-negative classical LCA (`nonnegative_lca`), rate-coded (`spiking_lca`), late
 
 | | |
 |---|---|
-| Images | Kodak `kodim01`–`kodim24`, grayscale, downscaled to 512 px on the long side (512×336 or 336×512, 2688 patches each) |
+| Images | Kodak `kodim01`–`kodim24`, grayscale, downscaled to 512 px on the long side and cropped (512×336 or 336×512, 2688 patches each) |
 | Whitening | Whole image filtered in Fourier space by R(f) = f·exp(−(f/f₀)⁴), f₀ = 0.4 cycles/pixel, f = √(fx² + fy²) (`np.fft.fftfreq` units), then cut into 8×8 patches and scaled to unit variance per image |
-| Dictionary | `SNN/phi_learned_whiten.npz`: 64×128 (single, not doubled), learned with non-negative ISTA (λ = 0.1, η = 0.1, 10,000 iterations, batch 256, 200 ISTA steps) on 100k random patches of whitened Kodak images (f₀ = 0.4), columns at norm 1 |
+| Dictionary | `SNN/phi_learned_whiten.npz`: 64×128, learned with non-negative ISTA (λ = 0.1, η = 0.1, 10,000 iterations, batch 256, 200 ISTA steps) on 100k random patches of whitened Kodak images (f₀ = 0.4), columns at norm 1 |
 | Parameters | λ = 0.1, ε = 0.1, lr = 1/‖Φ‖₂² = 0.188 (`SNN/config.py`) |
 | Non-negative LCA | 400 iterations, a = max(u − λ·lr, 0) (`classical/nonnegative_LCA.py`) |
 | Rate | 204,800 steps, dt = 1 / max\|x\| per image |
 | Latency | 400 cycles × 512 steps = 204,800 steps, T = max\|x\| per image, leftover v carried across cycles (see Rounding error) |
 | Temporal pattern | 400 cycles × 9 bits = 3,600 steps, same T, so q = T/512, the same grid as latency, leftover v carried across cycles |
 
-Metric: SNR = 10·log10(mean(W²) / MSE), where W is the whitened image and MSE = mean((Ŵ − W)²), with Ŵ the reconstruction Φa put back together and the scale undone, before unwhitening. "Active" is the number of nonzero coefficients per patch, out of 128.
+Metric: SNR = 10·log10(mean(W²) / MSE), where W is the whitened image and MSE = mean((Ŵ − W)²), with Ŵ the reconstruction Φa put back together and the scale undone, before unwhitening. "Active" is the number of nonzero coefficients per patch.
 
 ## Summary (mean ± std over 24 images)
 
@@ -33,7 +33,7 @@ Metric: SNR = 10·log10(mean(W²) / MSE), where W is the whitened image and MSE 
 | Latency | 20.59 ± 0.75 | 35.9 ± 5.4 | 15,452 | 25,011 | 204,800 | 541 s |
 | Temporal pattern | 20.99 ± 0.73 | 35.9 ± 5.4 | 37,794 | 65,999 | 3,600 | 6.2 s |
 
-Wall-clock was measured with 6 jobs running at once, 3 threads each. Earlier results are in `legacy_tests/`.
+Wall-clock time was measured with 6 jobs running at once, 3 threads each. Earlier results are in `legacy_tests/`.
 
 ## Per-image SNR (dB) and active coefficients per patch
 

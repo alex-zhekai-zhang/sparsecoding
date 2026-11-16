@@ -10,7 +10,7 @@ import SNN.config as config
 
 S = 9 #2^9 = 512 representable values
 cycles = 400
-def spiking_LCA(input, lamby, Phi, lr, epsilon, S, T, num_bases, record=True):   # S = steps per cycle (bits), T = representable range in value units (largest representable x or a)
+def spiking_LCA(input, lamby, Phi, lr, epsilon, S, T, num_bases, cycles, record=True):   # S = steps per cycle (bits), T = representable range in value units (largest representable x or a)
     Phi = torch.tensor(Phi, dtype=torch.float32)
     x = torch.tensor(input, dtype=torch.float32)   
     x = torch.cat([torch.clamp(x, min=0), torch.clamp(-x, min=0)])   #On Off Split
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     Phi = config.Phi
     image = config.image - config.image.mean()
     T = np.abs(image).max()   # cycle covers the largest ON/OFF input
-    a, vs, spikes = spiking_LCA(image, config.lamby, Phi, config.lr, config.epsilon, S, T, Phi.shape[1])
+    a, vs, spikes = spiking_LCA(image, config.lamby, Phi, config.lr, config.epsilon, S, T, Phi.shape[1], cycles)
     print(a)
     plt.imshow(spikes.T, aspect='auto', interpolation='nearest')
     plt.show()

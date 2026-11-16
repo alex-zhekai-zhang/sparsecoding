@@ -8,7 +8,8 @@ import matplotlib.pyplot as plt
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # so SNN.config can be imported when running this file directly
 import SNN.config as config
 
-T = 204800
+T = 2560
+f = 0.5   # decode the last f*T steps
 def spiking_LCA(input, lamby, Phi, lr, epsilon, T, num_bases, record=True, dt=None):   # T = number of steps, dt = simulated time per step
     Phi = torch.tensor(Phi, dtype=torch.float32)
     x = torch.tensor(input, dtype=torch.float32)   
@@ -24,6 +25,7 @@ def spiking_LCA(input, lamby, Phi, lr, epsilon, T, num_bases, record=True, dt=No
 
     vs, spikes = [], []
     count = 0
+    discard = int(T * (1 - f))
     s = v >= theta
     start, n_out, n_in = time.perf_counter(), 0, 0   # time and spike counts, for comparing against latency_SLCA
     for t in range(T):
@@ -37,13 +39,13 @@ def spiking_LCA(input, lamby, Phi, lr, epsilon, T, num_bases, record=True, dt=No
         n_out, n_in = n_out + s.sum(), n_in + s_in.sum()
         if record:
             vs += [v]; spikes += [s]
-        elif t >= 1000:
-            count = count + s.float()   # only count spikes: storing every step for thousands of patches won't fit in memory
+        elif t >= discard:
+            count = count + s.float()   # count the last f*T steps
     print(f"rate: {T} steps (dt={dt:.3g}, {T * dt:.0f} time units), {n_out.item() / (x.shape[1] if x.dim() > 1 else 1):.0f} recurrent spikes/patch, {n_in.item() / (x.shape[1] if x.dim() > 1 else 1):.0f} input spikes/patch, {time.perf_counter() - start:.1f}s")
     if not record:
-        return count / ((T - 1000) * dt)   # spikes per unit time
+        return count / ((T - discard) * dt)   # spikes per unit time over the last f*T steps
     spikes = torch.stack(spikes)
-    a = spikes[1000:].float().mean(0) / dt
+    a = spikes[discard:].float().mean(0) / dt
     return a, torch.stack(vs), spikes
 
 if __name__ == "__main__":

@@ -60,11 +60,11 @@ def learn_phi(X, num_bases, lamby, rng, iters=10000, batch=256, eta=0.1, steps=2
     Phi = rng.standard_normal((X.shape[0], num_bases))
     Phi *= 1 / np.linalg.norm(Phi, axis=0) #initialize norm
     for it in range(iters):
-        x = X[:, rng.integers(X.shape[1], size=batch)]
+        x = X[:, rng.integers(X.shape[1], size=batch)] #size 64 x 256; 64 pixels for each of the 256 patches
         lr = 1 / np.linalg.norm(Phi, 2) ** 2   # largest stable step for ISTA
-        a = nonnegative_ISTA(x, lamby, Phi, lr, num_bases, steps)
-        residual = x - Phi @ a
-        Phi += eta * residual @ a.T / batch   # -dE/dPhi, averaged over the batch
+        a = nonnegative_ISTA(x, lamby, Phi, lr, num_bases, steps) #produces size 128 x 256 coefficients
+        residual = x - Phi @ a 
+        Phi += eta * residual @ a.T / batch   # -dE/dPhi averaged; residual @ a.T produces (64 x 256)(256 x 128) = 64 x 128, and dividing by batch averages the dot products
         Phi *= 1 / np.maximum(np.linalg.norm(Phi, axis=0), 1e-12)   # otherwise Phi arbitrarily grows and a shrinks which is cheating
         if it % 100 == 0 or it == iters - 1:
             energy = np.mean(0.5 * np.sum(residual ** 2, axis=0) + lamby * np.sum(np.abs(a), axis=0))

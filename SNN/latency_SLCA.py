@@ -8,14 +8,14 @@ import matplotlib.pyplot as plt
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # so SNN.config can be imported when running this file directly
 import SNN.config as config
 
-S = 512
-cycles = 400
-def spiking_LCA(input, lamby, Phi, lr, epsilon, S, T, num_bases, record=True):   # S = steps per cycle, T = cycle length in value units (largest representable x or a)
+S = 128
+cycles = 40
+def spiking_LCA(input, lamby, Phi, lr, epsilon, S, T, num_bases, cycles, record=True):   # S = steps per cycle, T = cycle length in value units (largest representable x or a)
     Phi = torch.tensor(Phi, dtype=torch.float32)
     x = torch.tensor(input, dtype=torch.float32)   
-    x = torch.cat([torch.clamp(x, min=0), torch.clamp(-x, min=0)])   #On Off Split
+    x = torch.cat([torch.clamp(x, min=0), torch.clamp(-x, min=0)])   #On Off Split, 64 x 1 concat 64 x 1 gives 128 x 1
     I = torch.eye(num_bases)
-    feedforward = lr * torch.cat([Phi, -Phi]).T * epsilon  #On Off split
+    feedforward = lr * torch.cat([Phi, -Phi]).T * epsilon  #On Off split, 64 x 128 concatenated to 64 x 128 gives 128 x 128; put negativity in the weights instead
     recurrent = (I - lr * (Phi.T @ Phi)) * epsilon         
                             
     u = torch.zeros_like(feedforward @ x) # same shape as the input current, so x can be one patch or a matrix of patches (one per column)
@@ -46,7 +46,7 @@ def spiking_LCA(input, lamby, Phi, lr, epsilon, S, T, num_bases, record=True):  
             input_spikes_feedforward = (torch.clamp(torch.round(S - x/dt), min=0) == t).float()  
             input_spikes_recurrent = s.float()
             n_out, n_in = n_out + s.sum(), n_in + input_spikes_feedforward.sum()
-            I += feedforward @ input_spikes_feedforward + recurrent @ input_spikes_recurrent
+            I += feedforward @ input_spikes_feedforward + recurrent @ input_spikes_recurrent #both are (128 x 128)(128 x 1) 
             u = u + I * dt
             if record:
                 vs += [v]; spikes += [s]
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     Phi = config.Phi
     image = config.image - config.image.mean()
     T = np.abs(image).max()   # cycle covers the largest ON/OFF input
-    a, vs, spikes = spiking_LCA(image, config.lamby, Phi, config.lr, config.epsilon, S, T, Phi.shape[1])
+    a, vs, spikes = spiking_LCA(image, config.lamby, Phi, config.lr, config.epsilon, S, T, Phi.shape[1], cycles)
     print(a)
     plt.imshow(spikes.T, aspect='auto', interpolation='nearest')
     plt.show()

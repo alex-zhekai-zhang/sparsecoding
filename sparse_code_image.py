@@ -88,7 +88,7 @@ if __name__ == "__main__":
         X_hat = Phi @ A
     elif args.method == "nonnegative_lca":
         Phi, lr = config.load_phi(args.preprocess)
-        A = NLCA.LCA(X, config.lamby, Phi, lr, config.epsilon, Phi.shape[1])
+        A = NLCA.LCA(X, config.lamby, Phi, lr, config.epsilon, Phi.shape[1], NLCA.cycles)
         X_hat = Phi @ A
     elif args.method == "spiking_lca":
         Phi, lr = config.load_phi(args.preprocess)
@@ -97,12 +97,12 @@ if __name__ == "__main__":
     elif args.method == "latency_slca":
         Phi, lr = config.load_phi(args.preprocess)
         T = np.abs(X).max()   # cycle length: covers the largest ON/OFF input
-        A = LSLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, LSLCA.S, T, Phi.shape[1], record=False).numpy()
+        A = LSLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, LSLCA.S, T, Phi.shape[1], LSLCA.cycles, record=False).numpy()
         X_hat = Phi @ A
     elif args.method == 'temporal_pattern_slca':
         Phi, lr = config.load_phi(args.preprocess)
         T = np.abs(X).max()   # representable range: covers the largest ON/OFF input
-        A = TPSLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, TPSLCA.S, T, Phi.shape[1], record=False).numpy()
+        A = TPSLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, TPSLCA.S, T, Phi.shape[1], TPSLCA.cycles, record=False).numpy()
         X_hat = Phi @ A
     elif args.method == "mean":   # control: all-zero code, so only what preprocessing removed comes back (each patch's mean for sub-mean, the image's mean for whiten)
         Phi, lr = config.load_phi(args.preprocess)
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         unwhitened_recon = unwhiten(recon, mean)
         original = whiten(original)
     mse = np.mean((recon - original) ** 2)
-    print(f"MSE: {mse:.6f}   SNR: {10 * np.log10(np.mean(original ** 2) / mse):.2f} dB")
+    print(f"MSE: {mse:.6f}  NMSE: {mse / np.mean(original ** 2)}  SNR: {10 * np.log10(np.mean(original ** 2) / mse):.2f} dB")
     print(f"active coefficients per patch: {np.count_nonzero(A, axis=0).mean():.1f} / {Phi.shape[1]}")
 
     name = os.path.splitext(os.path.basename(args.image))[0]

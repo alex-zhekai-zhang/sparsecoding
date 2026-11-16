@@ -8,7 +8,7 @@ sys.path.append(str(Path(__file__).resolve().parent.parent))
 from SNN.phi_learner import sample_patches, learn_phi
 # parameters shared by the spiking LCAs (rate, latency, temporal pattern); start from classical/LCA.py's values
 lamby = 0.1
-epsilon = 0.1
+epsilon = 0.5
 num_bases = 128
 dataset = sorted(glob.glob(str(Path(__file__).resolve().parent.parent / "images" / "kodak" / "*.png")))
 rng = np.random.default_rng(0)
@@ -26,7 +26,7 @@ def load_phi(preprocess="whiten"):
         rng = np.random.default_rng(0)
         Phi = learn_phi(sample_patches(dataset, 100000, rng, preprocess=preprocess), num_bases, lamby, rng)
         np.savez(cache, Phi=Phi, key=key)
-    return Phi, 1 / np.linalg.norm(Phi, 2) ** 2   # largest stable step; this is where 0.0027 came from for the old random Gaussian Phi
+    return Phi, 1 / np.linalg.norm(Phi, 2) ** 2   # largest stable step; largest eigenvalue of Phi.transpose() @ Phi
 
 Phi, lr = load_phi("whiten")
 image = rng.standard_normal(64)
