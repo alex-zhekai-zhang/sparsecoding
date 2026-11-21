@@ -40,7 +40,7 @@ def code_channel(channel, method):
         Phi = LCA.Phi
         A = LCA.LCA(X, LCA.lamby, Phi, LCA.lr, LCA.epsilon, Phi.shape[1])
     else:
-        T = np.abs(X).max()   # cycle length: covers the largest ON/OFF input
+        T = 2.5 * np.abs(X).max()   # cycle length: 2.5x the largest ON/OFF input, so large coefficients are not clipped
         A = LSLCA.spiking_LCA(X, config.lamby, config.Phi, config.lr, config.epsilon, LSLCA.S, T, config.Phi.shape[1], record=False).numpy()
         Phi = config.Phi
 

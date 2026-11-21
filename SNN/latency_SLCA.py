@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 sys.path.append(str(Path(__file__).resolve().parent.parent))  # so SNN.config can be imported when running this file directly
 import SNN.config as config
 
-S = 128
-cycles = 40
-def spiking_LCA(input, lamby, Phi, lr, epsilon, S, T, num_bases, cycles, record=True):   # S = steps per cycle, T = cycle length in value units (largest representable x or a)
+S = 512
+cycles = 20
+def spiking_LCA(input, lamby, Phi, lr, epsilon, S, T, num_bases, cycles, record=True, live=True):   # S = steps per cycle, T = cycle length in value units (largest representable x or a); live=False is snapshot mode
     Phi = torch.tensor(Phi, dtype=torch.float32)
     x = torch.tensor(input, dtype=torch.float32)   
     x = torch.cat([torch.clamp(x, min=0), torch.clamp(-x, min=0)])   #On Off Split, 64 x 1 concat 64 x 1 gives 128 x 1
@@ -28,9 +28,42 @@ def spiking_LCA(input, lamby, Phi, lr, epsilon, S, T, num_bases, cycles, record=
     t_r = torch.zeros_like(u) - 1
     start, n_out, n_in = time.perf_counter(), 0, 0   # wall-clock and spike counts, for comparing against spiking_LCA
     fired = torch.zeros_like(v)
+    if not live:   # snapshot mode: v only sees u at the start of each cycle, with a per-cycle leak
+        for c in range(cycles):
+            u_prev = u
+            u = (1-epsilon)*u   # per-cycle leak
+            I = 0
+            v = torch.clamp(v - (-(fired - 1))*theta, min=0)
+            fired = torch.zeros_like(v)
+            v += u_prev # IF neuron with u_prev added to previous leftovers, so over time, it averages the rounding error out
+            t_first = torch.full_like(u, S) # step of each neuron's first spike this cycle; S = hasn't fired
+        
+            for t in range(S):
+            
+                s = (v >= theta) & (fired == 0)#spikes
+                fired += s
+                v = v - (s).float() * theta
+                v = v + dt * (-(fired - 1))
+                input_spikes_feedforward = (torch.clamp(torch.round(S - x/dt), min=0) == t).float()  
+                input_spikes_recurrent = s.float()
+                n_out, n_in = n_out + s.sum(), n_in + input_spikes_feedforward.sum()
+                I += feedforward @ input_spikes_feedforward + recurrent @ input_spikes_recurrent #both are (128 x 128)(128 x 1) 
+                u = u + I * dt   # v only sees u at the start of the next cycle
+                if record:
+                    vs += [v]; spikes += [s]
+                else:
+                    t_first = torch.where(s & (t_first == S), t, t_first)   # only track first spikes: storing every step for thousands of patches won't fit in memory
+        print(f"latency snapshot: {S * cycles} steps (dt={dt:.3g}, {cycles * S * dt:.0f} time units), {n_out.item() / (x.shape[1] if x.dim() > 1 else 1):.0f} recurrent spikes/patch, {n_in.item() / (x.shape[1] if x.dim() > 1 else 1):.0f} input spikes/patch, {time.perf_counter() - start:.1f}s")
+        if not record:
+            return T - t_first * dt   # decode the final cycle; neurons that never fired get T - S*dt = 0
+        spikes = torch.stack(spikes)
+        final_cycle = spikes[-S:]
+        diditspike = final_cycle.any(0).float()   # reduce over time (dim 0): one True/False per neuron (and per patch)
+        a = ((T - final_cycle.int().argmax(0) * dt) * diditspike)
+             
+        return a, torch.stack(vs), spikes
     for c in range(cycles):
         u_prev = u
-        u = (1-epsilon)*u
         I = 0
         v = torch.clamp(v - (-(fired - 1))*theta, min=0)
         fired = torch.zeros_like(v)
@@ -39,7 +72,7 @@ def spiking_LCA(input, lamby, Phi, lr, epsilon, S, T, num_bases, cycles, record=
         
         for t in range(S):
             
-            s = v >= theta #spikes
+            s = (v >= theta) & (fired == 0)#spikes
             fired += s
             v = v - (s).float() * theta
             v = v + dt * (-(fired - 1))
@@ -47,7 +80,9 @@ def spiking_LCA(input, lamby, Phi, lr, epsilon, S, T, num_bases, cycles, record=
             input_spikes_recurrent = s.float()
             n_out, n_in = n_out + s.sum(), n_in + input_spikes_feedforward.sum()
             I += feedforward @ input_spikes_feedforward + recurrent @ input_spikes_recurrent #both are (128 x 128)(128 x 1) 
-            u = u + I * dt
+            u_old = u
+            u = (1 - epsilon / S) * u + I * dt   # per-step leak, as in spiking_LCA
+            v = v + (u - u_old) * (fired == 0).float()   # live u
             if record:
                 vs += [v]; spikes += [s]
             else:
@@ -65,7 +100,7 @@ def spiking_LCA(input, lamby, Phi, lr, epsilon, S, T, num_bases, cycles, record=
 if __name__ == "__main__":
     Phi = config.Phi
     image = config.image - config.image.mean()
-    T = np.abs(image).max()   # cycle covers the largest ON/OFF input
+    T = 2.5 * np.abs(image).max()   # cycle covers 2.5x the largest ON/OFF input, so large coefficients are not clipped
     a, vs, spikes = spiking_LCA(image, config.lamby, Phi, config.lr, config.epsilon, S, T, Phi.shape[1], cycles)
     print(a)
     plt.imshow(spikes.T, aspect='auto', interpolation='nearest')

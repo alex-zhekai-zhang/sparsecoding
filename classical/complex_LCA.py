@@ -15,7 +15,7 @@ def gabor(idx, sigma=1.5, period=4):
     return np.exp(-idx**2 / (2 * sigma**2)) * np.exp(2j * np.pi * idx / period) #complex version of RingLCA's wavelet; real part is the cosine gabor, imaginary part the sine
 Phi = gabor(np.arange(64)[:, None] - (np.arange(128)/2)[None, :]) #same layout as RingLCA: 128 centers at half-pixel steps along the 64 (flattened) pixels
 beta = 0.1
-epsilon = 0.1
+epsilon = 1.0
 def load_movie(path):
     video = np.stack([np.asarray(f.convert("L"), dtype=float).flatten() / 255 for f in ImageSequence.Iterator(Image.open(path))]) #(num_frames, pixels)
     if video.shape[1] != Phi.shape[0]:

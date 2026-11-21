@@ -13,7 +13,7 @@ Phi = wavelet(np.arange(64)[:, None] - (np.arange(128)/2)[None, :]) #wavelet bas
 
 #TODO: Find way to optimize discrete phase and implement RingLCA; current code is normal LCA
 image = rng.standard_normal(64)
-epsilon = 0.1
+epsilon = 1.0
 print(Phi)
 def LCA(input, lamby, Phi, lr, epsilon, num_bases):
     x = input

@@ -5,7 +5,7 @@ lamby = 1.0
 rng = np.random.default_rng(0)
 Phi = rng.standard_normal((64, 128))
 image = rng.standard_normal(64)
-epsilon = 0.1
+epsilon = 1.0
 def LCA(input, lamby, Phi, lr, epsilon, num_bases):
     x = input
     I = np.eye(num_bases)

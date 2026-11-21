@@ -92,16 +92,16 @@ if __name__ == "__main__":
         X_hat = Phi @ A
     elif args.method == "spiking_lca":
         Phi, lr = config.load_phi(args.preprocess)
-        A = SLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, SLCA.T, Phi.shape[1], record=False).numpy()
+        A = SLCA.spiking_LCA(X, config.lamby, Phi, 2, config.epsilon, SLCA.T, Phi.shape[1], record=False).numpy()
         X_hat = Phi @ A
     elif args.method == "latency_slca":
         Phi, lr = config.load_phi(args.preprocess)
-        T = np.abs(X).max()   # cycle length: covers the largest ON/OFF input
-        A = LSLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, LSLCA.S, T, Phi.shape[1], LSLCA.cycles, record=False).numpy()
+        T = 1.3 * np.abs(X).max()   # cycle length: 2.5x the largest ON/OFF input, so large coefficients are not clipped
+        A = LSLCA.spiking_LCA(X, config.lamby, Phi, 3 * lr / 0.1, config.epsilon, LSLCA.S, T, Phi.shape[1], LSLCA.cycles, record=False).numpy()
         X_hat = Phi @ A
     elif args.method == 'temporal_pattern_slca':
         Phi, lr = config.load_phi(args.preprocess)
-        T = np.abs(X).max()   # representable range: covers the largest ON/OFF input
+        T = 2.5 * np.abs(X).max()   # representable range: 2.5x the largest ON/OFF input, so large coefficients are not clipped
         A = TPSLCA.spiking_LCA(X, config.lamby, Phi, lr, config.epsilon, TPSLCA.S, T, Phi.shape[1], TPSLCA.cycles, record=False).numpy()
         X_hat = Phi @ A
     elif args.method == "mean":   # control: all-zero code, so only what preprocessing removed comes back (each patch's mean for sub-mean, the image's mean for whiten)
